@@ -316,7 +316,9 @@ METAR-Reader/
 ├── docs/
 │   └── screenshots/        # Images used in this README
 └── tests/
-    └── test_metar_decoder.py   # Decoder and route tests
+    ├── conftest.py             # Shared fixtures (test client, mock API)
+    ├── test_app.py             # Flask app tests
+    └── test_metar_decoder.py   # Decoder tests
 ```
 
 ### Request flow
@@ -334,16 +336,40 @@ Browser ◀──── rendered index.html with summary + details
 
 ## Running the tests
 
+The project uses [pytest](https://docs.pytest.org/). Run the whole suite with:
+
 ```bash
-pytest
+pytest           # quick run
+pytest -v        # list every test case
 ```
 
-The tests cover:
+To see which lines of code the tests exercise:
 
-- **The decoder**: US and international reports, calm, gusty and variable winds, fractional and metric visibility, freezing temperatures, thunderstorms, `CAVOK`, humidity, and unrecognised groups.
-- **The web routes**: successful lookups, code normalisation, unknown airports and invalid input.
+```bash
+pytest --cov=app --cov=metar_decoder --cov-branch --cov-report=term-missing
+```
 
-The route tests replace the network call with a fake response, so the whole test suite runs offline and doesn't depend on the live weather.
+### How the tests are organised
+
+| File | What it tests |
+| --- | --- |
+| `tests/test_metar_decoder.py` | The decoder, using hand-written mock METAR readings. Covers every group type (time, wind, visibility, weather, clouds, temperature, pressure), the helper functions, the summary rules, edge cases, and ten complete real-world style reports (blizzard, fog, thunderstorm, CAVOK, below freezing…) with their exact expected summaries. |
+| `tests/test_app.py` | The Flask app: airport code normalisation, the API call, error handling (unknown airport, timeouts, bad responses), the HTML page and the JSON API. |
+| `tests/conftest.py` | Shared fixtures: a Flask test client, `mock_api` for faking aviationweather.gov responses, and a guard that fails any test that tries to reach the real internet. |
+
+Most tests are **parametrised tables**: one test function runs against many *mock METAR → expected meaning* rows, and pytest reports each row as its own test. Adding a new case is usually a one-line change:
+
+```python
+@pytest.mark.parametrize("group, expected", [
+    ("-RA", "light rain"),
+    ("+TSRA", "heavy thunderstorm with rain"),
+    ("FZFG", "freezing fog"),     # ← add a row here
+])
+def test_weather(group, expected):
+    ...
+```
+
+The app tests never call the live API, so the suite runs offline in under a second and always gets the same results.
 
 ---
 
