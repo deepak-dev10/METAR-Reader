@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{% if report %}{{ report.station }} weather · {% endif %}METAR Reader{% endblock %}
+
+{% block content %}
+<header class="hero">
+  <h1>METAR Reader</h1>
+  <p>Type an airport code to get the current weather in plain English.</p>
+</header>
+
+<form class="search" action="{{ url_for('metar') }}" method="get">
+  <input type="text" name="code" value="{{ code or '' }}" placeholder="e.g. KJFK, LAX, EGLL"
+         maxlength="4" autocomplete="off" autocapitalize="characters" autofocus required
+         aria-label="Airport code">
+  <button type="submit">Get weather</button>
+</form>
+
+{% if error %}
+  <div class="error" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if report %}
+<section class="card">
+  <div class="station">
+    <span class="code">{{ report.station }}</span>
+    <span class="name">{{ report.name }}</span>
+  </div>
+
+  <p class="summary">{{ report.summary }}</p>
+
+  <dl class="details">
+    {% if report.temperature %}
+    <div>
+      <dt>Temperature</dt>
+      <dd>{{ report.temperature.temp_f }}°F ({{ report.temperature.temp_c }}°C)</dd>
+    </div>
+      {% if report.temperature.dew_c is not none %}
+    <div>
+      <dt>Dewpoint</dt>
+      <dd>{{ report.temperature.dew_f }}°F ({{ report.temperature.dew_c }}°C)</dd>
+    </div>
+    <div>
+      <dt>Humidity</dt>
+      <dd>{{ report.temperature.humidity }}%</dd>
+    </div>
+      {% endif %}
+    {% endif %}
+
+    {% if report.wind %}
+    <div>
+      <dt>Wind</dt>
+      <dd>{{ report.wind.text }}{% if report.wind_variation %}<br><small>{{ report.wind_variation }}</small>{% endif %}</dd>
+    </div>
+    {% endif %}
+
+    {% if report.visibility %}
+    <div>
+      <dt>Visibility</dt>
+      <dd>{{ report.visibility.text }}</dd>
+    </div>
+    {% endif %}
+
+    <div>
+      <dt>Sky</dt>
+      <dd>
+        {% if report.clouds %}
+          {% for cloud in report.clouds %}{{ cloud.text }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+        {% elif report.sky %}
+          {{ report.sky }}
+        {% else %}
+          Not reported
+        {% endif %}
+      </dd>
+    </div>
+
+    {% if report.weather %}
+    <div>
+      <dt>Weather</dt>
+      <dd>{{ report.weather | join(', ') | capitalize }}</dd>
+    </div>
+    {% endif %}
+
+    {% if report.pressure %}
+    <div>
+      <dt>Pressure</dt>
+      <dd>{{ report.pressure.text }}</dd>
+    </div>
+    {% endif %}
+
+    {% if report.time %}
+    <div>
+      <dt>Observed</dt>
+      <dd>{{ report.time.text }}{% if report.auto %}<br><small>Automated station</small>{% endif %}</dd>
+    </div>
+    {% endif %}
+  </dl>
+
+  <details class="raw">
+    <summary>Show raw METAR</summary>
+    <code>{{ report.raw }}</code>
+  </details>
+</section>
+{% endif %}
+{% endblock %}
