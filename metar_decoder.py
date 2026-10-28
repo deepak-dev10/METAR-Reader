@@ -368,7 +368,7 @@ def parse_cloud(match):
     if height is not None:
         text += f" at {height:,} ft"
     if cloud_type:
-        text += f" ({cloud_type})"
+        text += f", {cloud_type}"
     return {"cover": cover, "height_ft": height, "type": cloud_type, "text": text}
 
 
@@ -559,8 +559,12 @@ def decode_metar(raw):
             decoded["wind_variation"] = (
                 f"Varying between {degrees_to_compass(frm)} ({frm}°) and {degrees_to_compass(to)} ({to}°)"
             )
-        elif token.isdigit() and len(token) <= 2 and i < len(tokens) and VIS_MILES_RE.match(tokens[i]):
-            # Visibility split over two groups, e.g. "1 1/2SM"
+        elif (
+            token.isdigit() and len(token) <= 2 and i < len(tokens)
+            and "/" in tokens[i] and VIS_MILES_RE.match(tokens[i])
+        ):
+            # Visibility split over two groups, e.g. "1 1/2SM". The second
+            # group must be a fraction; "2 10SM" is not "2 10 miles".
             decoded["visibility"] = parse_visibility_miles(VIS_MILES_RE.match(tokens[i]), whole_miles=token)
             i += 1
         elif m := VIS_MILES_RE.match(token):
